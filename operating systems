@@ -1,0 +1,80 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+pthread_mutex_t lock;
+pthread_cond_t student_done;
+int pen = 0, paper = 0, question_paper = 0;
+
+void *teacher()
+{
+    while(1) {
+        pthread_mutex_lock(&lock);
+        while(pen == 0 || paper == 0 || question_paper == 0) {
+            pthread_cond_wait(&student_done, &lock);
+        }
+        pen = paper = question_paper = 0;
+        printf("Teacher placed two things on the table\n");
+        pthread_mutex_unlock(&lock);
+    }
+}
+
+void *student(void *arg)
+{
+    int student_id = *(int *)arg;
+    while(1) {
+        pthread_mutex_lock(&lock);
+        int item1 = rand() % 3 + 1, item2 = rand() % 3 + 1;
+        while(item1 == item2 || (item1 == 1 && item2 == 2) || (item1 == 2 && item2 == 1) || (item1 == 2 && item2 == 3) || (item1 == 3 && item2 == 2) || (item1 == 1 && item2 == 3) || (item1 == 3 && item2 == 1)) {
+            item1 = rand() % 3 + 1;
+            item2 = rand() % 3 + 1;
+        }
+        if(item1 == 1 && item2 == 2) {
+            pen = 1;
+            paper = 1;
+            printf("Student %d has pen and paper\n", student_id);
+        }
+        else if(item1 == 2 && item2 == 1) {
+            pen = 1;
+            paper = 1;
+            printf("Student %d has pen and paper\n", student_id);
+        }
+        else if(item1 == 2 && item2 == 3) {
+            paper = 1;
+            question_paper = 1;
+            printf("Student %d has paper and question paper\n", student_id);
+        }
+        else if(item1 == 3 && item2 == 2) {
+            paper = 1;
+            question_paper = 1;
+            printf("Student %d has paper and question paper\n", student_id);
+        }
+        else if(item1 == 1 && item2 == 3) {
+            pen = 1;
+            question_paper = 1;
+            printf("Student %d has pen and question paper\n", student_id);
+        }
+        else if(item1 == 3 && item2 == 1) {
+            pen = 1;
+            question_paper = 1;
+            printf("Student %d has pen and question paper\n", student_id);
+        }
+        if(pen == 1 && paper == 1 && question_paper == 1) {
+            printf("Student %d has completed the assignment\n", student_id);
+            pthread_cond_signal(&student_done);
+        }
+        pthread_mutex_unlock(&lock);
+    }
+}
+
+int main()
+{
+    pthread_t threads[4];
+    int student_ids[3] = {1, 2, 3};
+    pthread_mutex_init(&lock, NULL);
+    pthread_cond_init(&student_done, NULL);
+    pthread_create(&threads[0], NULL, teacher, NULL);
+    pthread_create(&threads[1], NULL, student, &student_ids[0]);
+    pthread_create(&threads[2], NULL, student, &student_ids[1]);
+    pthread_create(&threads[3], NULL, student, &student_ids[2]);
+    
